@@ -161,6 +161,72 @@ function carEstimate(origin,dest,datetime){
     source:'calc'
   };
 }
+function trainEstimates(origin,dest,date,depTime){
+  var dist=haversine(origin,dest);
+  var roadDist=dist*1.3;
+  var speed=roadDist>300?280:roadDist>150?180:120;
+  var trainDurMin=Math.round((roadDist/speed)*60)+15;
+  var co2=Math.round(roadDist*0.006*10)/10;
+  var basePrice=roadDist>300?Math.round(roadDist*0.13)
+    :roadDist>150?Math.round(roadDist*0.11)
+    :Math.round(roadDist*0.08);
+  var trainType=roadDist>300?'TGV INOUI'
+    :roadDist>150?'Intercités':'TER';
+  var results=[];
+  var slots=['06:30','08:00','10:00','12:30',
+    '14:00','16:30','18:00','20:00'];
+  var depH=parseInt(depTime.split(':')[0])||6;
+  for(var i=0;i<slots.length;i++){
+    var sh=parseInt(slots[i].split(':')[0]);
+    if(sh<depH)continue;
+    var depISO=date+'T'+slots[i]+':00';
+    var depDate=new Date(depISO);
+    var arrDate=new Date(depDate.getTime()+trainDurMin*60000);
+    var price=basePrice+Math.round(
+      (Math.random()-0.5)*basePrice*0.25);
+    results.push({
+      type:'train',dep:depISO,
+      arr:arrDate.toISOString(),
+      dur:trainDurMin*60,
+      legs:[{mode:'train',label:trainType,
+        from:origin.name,to:dest.name,
+        dep:depISO,arr:arrDate.toISOString(),
+        dur:trainDurMin*60}],
+      co2:co2,price:price,
+      bookUrl:'https://www.sncf-connect.com/app/home/search?departure='
+        +encodeURIComponent(origin.name)
+        +'&arrival='+encodeURIComponent(dest.name)
+        +'&outwardDate='+date+'T'+slots[i]
+        +':00&passengers=1',
+      source:'estimate',estimated:true
+    });
+  }
+  return results;
+}
+
+function carEstimate(origin,dest,datetime){
+  var dist=haversine(origin,dest)*1.3;
+  var durH=dist/110;
+  var price=Math.round((dist*0.09+dist*0.07)*100)/100;
+  var co2=Math.round(dist*0.12*10)/10;
+  var depDate=new Date(datetime);
+  var arrDate=new Date(depDate.getTime()+durH*3600000);
+  return{
+    type:'voiture',
+    dep:depDate.toISOString(),arr:arrDate.toISOString(),
+    dur:Math.round(durH*3600),
+    legs:[{mode:'voiture',label:'Voiture',
+      from:origin.name,to:dest.name,
+      dep:depDate.toISOString(),arr:arrDate.toISOString(),
+      dur:Math.round(durH*3600)}],
+    co2:co2,price:price,dist:Math.round(dist),
+    bookUrl:'https://www.blablacar.fr/search?fn='
+      +encodeURIComponent(origin.name)
+      +'&tn='+encodeURIComponent(dest.name)
+      +'&db='+datetime.slice(0,10),
+    source:'calc'
+  };
+}
 
 module.exports=async function handler(req,res){
   res.setHeader('Access-Control-Allow-Origin','*');
@@ -187,14 +253,25 @@ module.exports=async function handler(req,res){
         trips.push(sncfTrips[i]);
     }
   }
+  if(modeList.indexOf('train')!==-1){
+    var hasSNCFTrain=false;
+    for(var k=0;k<trips.length;k++){
+      if(trips[k].type==='train'&&trips[k].source==='sncf')
+        {hasSNCFTrain=true;break}
+    }
+    if(!hasSNCFTrain){
+      var te=trainEstimates(o,d,date,depTime);
+      for(var l2=0;l2<te.length;l2++)trips.push(te[l2]);
+    }
+  }
   if(modeList.indexOf('avion')!==-1){
     var fl=flightEstimates(o,d,date,depTime);
     for(var j=0;j<fl.length;j++)trips.push(fl[j]);
   }
   if(modeList.indexOf('bus')!==-1){
     var hasSNCFBus=false;
-    for(var k=0;k<trips.length;k++){
-      if(trips[k].type==='bus'&&trips[k].source==='sncf')
+    for(var k2=0;k2<trips.length;k2++){
+      if(trips[k2].type==='bus'&&trips[k2].source==='sncf')
         {hasSNCFBus=true;break}
     }
     if(!hasSNCFBus){
