@@ -257,141 +257,139 @@ window.tgl=function(el){
 };
 
 
-function trainEstimates(origin,dest,date,depTime){
-  var dist=haversine(origin,dest);
-  var roadDist=dist*1.3;
-  var speed=roadDist>300?280:roadDist>150?180:120;
-  var trainDurMin=Math.round((roadDist/speed)*60)+15;
-  var co2=Math.round(roadDist*0.006*10)/10;
-  var basePrice=roadDist>300?Math.round(roadDist*0.13)
-    :roadDist>150?Math.round(roadDist*0.11)
-    :Math.round(roadDist*0.08);
-  var trainType=roadDist>300?'TGV INOUI'
-    :roadDist>150?'Intercités':'TER';
-  var results=[];
-  var slots=['06:30','08:00','10:00','12:30',
-    '14:00','16:30','18:00','20:00'];
-  var depH=parseInt(depTime.split(':')[0])||6;
-  for(var i=0;i<slots.length;i++){
-    var sh=parseInt(slots[i].split(':')[0]);
-    if(sh<depH)continue;
-    var depISO=date+'T'+slots[i]+':00';
-    var depDate=new Date(depISO);
-    var arrDate=new Date(depDate.getTime()+trainDurMin*60000);
-    var price=basePrice+Math.round(
-      (Math.random()-0.5)*basePrice*0.25);
-    results.push({
-      type:'train',dep:depISO,
-      arr:arrDate.toISOString(),
-      dur:trainDurMin*60,
-      legs:[{mode:'train',label:trainType,
-        from:origin.name,to:dest.name,
-        dep:depISO,arr:arrDate.toISOString(),
-        dur:trainDurMin*60}],
-      co2:co2,price:price,
-      bookUrl:'https://www.sncf-connect.com/app/home/search?departure='
-        +encodeURIComponent(origin.name)
-        +'&arrival='+encodeURIComponent(dest.name)
-        +'&outwardDate='+date+'T'+slots[i]
-        +':00&passengers=1',
-      source:'estimate',estimated:true
-    });
-  }
-  return results;
+function mxf(f){
+  if(!AT.length)return 1;
+  var m=AT[0][f];
+  for(var i=1;i<AT.length;i++){
+    if(AT[i][f]>m)m=AT[i][f]}
+  return m||1;
 }
 
-function carEstimate(origin,dest,datetime){
-  var dist=haversine(origin,dest)*1.3;
-  var durH=dist/110;
-  var price=Math.round((dist*0.09+dist*0.07)*100)/100;
-  var co2=Math.round(dist*0.12*10)/10;
-  var depDate=new Date(datetime);
-  var arrDate=new Date(depDate.getTime()+durH*3600000);
-  return{
-    type:'voiture',
-    dep:depDate.toISOString(),arr:arrDate.toISOString(),
-    dur:Math.round(durH*3600),
-    legs:[{mode:'voiture',label:'Voiture',
-      from:origin.name,to:dest.name,
-      dep:depDate.toISOString(),arr:arrDate.toISOString(),
-      dur:Math.round(durH*3600)}],
-    co2:co2,price:price,dist:Math.round(dist),
-    bookUrl:'https://www.blablacar.fr/search?fn='
-      +encodeURIComponent(origin.name)
-      +'&tn='+encodeURIComponent(dest.name)
-      +'&db='+datetime.slice(0,10),
-    source:'calc'
-  };
+function applyF(){
+  var md=(parseInt(Q('#sd').value)/100)*mxf('dep');
+  var ma=(parseInt(Q('#sa').value)/100)*mxf('arr');
+  var mc=(parseInt(Q('#sc').value)/100)*mxf('co2');
+  var mp=(parseInt(Q('#spr').value)/100)*mxf('price');
+  Q('#vd').textContent='≤ '+hm(md);
+  Q('#va').textContent='≤ '+hm(ma);
+  Q('#vc').textContent='≤ '+mc.toFixed(1)+' kg';
+  Q('#vp').textContent='≤ '+mp.toFixed(0)+' €';
+  var dV=[],aV=[],cV=[],pV=[];
+  for(var i=0;i<AT.length;i++){
+    AT[i]._visible=AT[i].dep<=md&&AT[i].arr<=ma
+      &&AT[i].co2<=mc
+      &&(AT[i].price<=mp||AT[i].price===0);
+    dV.push(AT[i].dep);aV.push(AT[i].arr);
+    cV.push(AT[i].co2);pV.push(AT[i].price)}
+  drawHist('hd',dV,mxf('dep'),md,'#7c3aed');
+  drawHist('ha',aV,mxf('arr'),ma,'#0284c7');
+  drawHist('hc2',cV,mxf('co2'),mc,'#059669');
+  drawHist('hp',pV,mxf('price'),mp,'#ea580c');
+  var vi=0;
+  for(var j=0;j<AT.length;j++){
+    if(AT[j]._visible)vi++}
+  Q('#rc').textContent='('+vi+'/'+AT.length+')';
+  var so=AT.slice().sort(function(a,b){
+    if(a._visible&&!b._visible)return-1;
+    if(!a._visible&&b._visible)return 1;
+    if(a._tag&&!b._tag)return-1;
+    if(!a._tag&&b._tag)return 1;
+    return a.dep-b.dep});
+  var html=[];
+  for(var k=0;k<so.length;k++)
+    html.push(renderCard(so[k]));
+  Q('#rl').innerHTML=html.join('');
 }
 
-module.exports=async function handler(req,res){
-  res.setHeader('Access-Control-Allow-Origin','*');
-  var q=req.query;
-  var origin=q.origin,destination=q.destination,date=q.date;
-  var time=q.time,modes=q.modes;
-  if(!origin||!destination||!date)
-    return res.status(400).json({error:'Paramètres manquants'});
-  var o=CITIES[origin],d=CITIES[destination];
-  if(!o||!d)return res.status(400).json({
-    error:'Ville inconnue',
-    available:Object.keys(CITIES)});
-  o.name=origin;d.name=destination;
-  var depTime=time?(time.slice(0,2)+':'+time.slice(2,4)):'06:00';
-  var datetime=date+'T'+depTime+':00';
-  var sncfDt=date.replace(/-/g,'')+'T'+depTime.replace(':','')+'00';
-  var modeList=(modes||'train,avion,bus,voiture').split(',');
-  var SNCF_KEY=process.env.SNCF_API_KEY||'';
-  var trips=[];
-  if(modeList.indexOf('train')!==-1||modeList.indexOf('bus')!==-1){
-    var sncfTrips=await fetchSNCF(o,d,sncfDt,SNCF_KEY);
-    for(var i=0;i<sncfTrips.length;i++){
-      if(modeList.indexOf(sncfTrips[i].type)!==-1)
-        trips.push(sncfTrips[i]);
-    }
-  }
-  if(modeList.indexOf('train')!==-1){
-    var hasSNCFTrain=false;
-    for(var k=0;k<trips.length;k++){
-      if(trips[k].type==='train'&&trips[k].source==='sncf')
-        {hasSNCFTrain=true;break}
-    }
-    if(!hasSNCFTrain){
-      var te=trainEstimates(o,d,date,depTime);
-      for(var l2=0;l2<te.length;l2++)trips.push(te[l2]);
-    }
-  }
-  if(modeList.indexOf('avion')!==-1){
-    var fl=flightEstimates(o,d,date,depTime);
-    for(var j=0;j<fl.length;j++)trips.push(fl[j]);
-  }
-  if(modeList.indexOf('bus')!==-1){
-    var hasSNCFBus=false;
-    for(var k2=0;k2<trips.length;k2++){
-      if(trips[k2].type==='bus'&&trips[k2].source==='sncf')
-        {hasSNCFBus=true;break}
-    }
-    if(!hasSNCFBus){
-      var bu=busEstimates(o,d,date,depTime);
-      for(var l=0;l<bu.length;l++)trips.push(bu[l]);
-    }
-  }
-  if(modeList.indexOf('voiture')!==-1){
-    trips.push(carEstimate(o,d,datetime));
-  }
-  var dist=haversine(o,d)*1.3;
-  for(var m=0;m<trips.length;m++){
-    var t=trips[m];
-    if(t.co2===null||t.co2===undefined){
-      if(t.type==='train')t.co2=Math.round(dist*0.006*10)/10;
-      else if(t.type==='avion')t.co2=Math.round(dist*0.230*10)/10;
-      else if(t.type==='bus')t.co2=Math.round(dist*0.030*10)/10;
-    }
-  }
-  trips.sort(function(a,b){
-    return new Date(a.dep)-new Date(b.dep)});
-  return res.status(200).json({
-    origin:origin,destination:destination,date:date,
-    distance:Math.round(dist),
-    count:trips.length,trips:trips
+function doSearch(){
+  var on=Q('#ori').value.trim();
+  var dn=Q('#dst').value.trim();
+  if(!on||!dn){
+    alert('Entrez une ville de départ et d\'arrivée.');
+    return}
+  SO=on;SD=dn;
+  var dt=getDate();
+  var tm=(Q('#dtim').value||'06:00')
+    .replace(':','')+'00';
+  var modes=[];var cbs=QA('.mc');
+  for(var i=0;i<cbs.length;i++){
+    if(cbs[i].checked)modes.push(cbs[i].value)}
+  if(!modes.length){
+    alert('Sélectionnez au moins un mode.');return}
+  Q('#ri').textContent='⏳ Recherche en cours…';
+  Q('#ri').classList.remove('hidden');
+  Q('#sb').disabled=true;
+  Q('#sb').textContent='⏳ Recherche…';
+  var url='/api/search?origin='
+    +encodeURIComponent(on)
+    +'&destination='+encodeURIComponent(dn)
+    +'&date='+dt+'&time='+tm
+    +'&modes='+modes.join(',');
+  fetch(url).then(function(r){
+    return r.json()
+  }).then(function(data){
+    Q('#sb').disabled=false;
+    Q('#sb').textContent='🔍 Rechercher';
+    if(data.error){
+      alert(data.error
+        +(data.available
+          ?'\nVilles: '+data.available.join(', ')
+          :''));
+      Q('#ri').classList.add('hidden');return}
+    Q('#ri').textContent=on+' → '+dn
+      +' · '+dt+' · ~'+data.distance+' km · '
+      +data.count+' résultats';
+    AT=[];
+    for(var i=0;i<data.trips.length;i++){
+      var nt=normalize(data.trips[i]);
+      nt.id=i;AT.push(nt)}
+    var at=Q('#atim').value;
+    if(at){
+      var ap=at.split(':');
+      var ax=parseInt(ap[0])*60+parseInt(ap[1]);
+      var f=[];
+      for(var j=0;j<AT.length;j++){
+        if(AT[j].arr<=ax)f.push(AT[j])}
+      AT=f}
+    for(var k=0;k<AT.length;k++)delete AT[k]._tag;
+    var b=tagTrips(AT);
+    if(!AT.length){
+      Q('#badges').classList.add('hidden');
+      Q('#hg').classList.add('hidden');
+      Q('#results').classList.remove('hidden');
+      Q('#rc').textContent='(0)';
+      Q('#rl').innerHTML=
+        '<p style="text-align:center;color:#94a3b8'
+        +';padding:2rem">'
+        +'Aucun trajet trouvé.</p>';
+      return}
+    Q('#hg').classList.remove('hidden');
+    Q('#results').classList.remove('hidden');
+    showBadges(b);
+    Q('#sd').value=100;Q('#sa').value=100;
+    Q('#sc').value=100;Q('#spr').value=100;
+    applyF();
+  }).catch(function(err){
+    Q('#sb').disabled=false;
+    Q('#sb').textContent='🔍 Rechercher';
+    Q('#ri').textContent=
+      'Erreur de connexion. Vérifiez votre réseau.';
+    console.error(err);
   });
-};
+}
+
+Q('#sb').addEventListener('click',doSearch);
+Q('#swb').addEventListener('click',function(){
+  var o=Q('#ori').value;
+  Q('#ori').value=Q('#dst').value;
+  Q('#dst').value=o});
+Q('#sd').addEventListener('input',applyF);
+Q('#sa').addEventListener('input',applyF);
+Q('#sc').addEventListener('input',applyF);
+Q('#spr').addEventListener('input',applyF);
+setupAC('ori','ori-l');
+setupAC('dst','dst-l');
+Q('#ori').addEventListener('keydown',function(e){
+  if(e.key==='Enter')doSearch()});
+Q('#dst').addEventListener('keydown',function(e){
+  if(e.key==='Enter')doSearch()});
