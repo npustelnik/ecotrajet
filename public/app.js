@@ -149,14 +149,6 @@ function drawHist(cid,vals,maxV,cut,col){
     cx.fillRect(x,h-bh,bw-2,bh)}
 }
 
-
-Dis "ok 7A" pour la suite.
-Codex 16:53 ↑3↓2kR166.3kW3.9k0% ctxclaude-opus-4.6
-
-ok 7A
-openclaw-control-ui 16:54
-📄 public/app.js — Partie B (colle après A)
-
 function showBadges(b){
   if(!b){Q('#badges').classList.add('hidden');return}
   Q('#badges').classList.remove('hidden');
@@ -185,10 +177,18 @@ var BKLBL={
 function defaultBookUrl(t){
   if(t.bookUrl)return t.bookUrl;
   var dt=getDate();
-  if(t.type==='train')return'https://www.sncf-connect.com/app/home/search?departure='+encodeURIComponent(SO)+'&arrival='+encodeURIComponent(SD)+'&outwardDate='+dt+'T'+hm(t.depISO)+':00&passengers=1';
-  if(t.type==='avion')return'https://www.skyscanner.fr/transport/vols/'+encodeURIComponent(SO)+'/'+encodeURIComponent(SD)+'/'+dt.replace(/-/g,'')+'/?adults=1';
-  if(t.type==='bus')return'https://www.flixbus.fr/recherche?departureCity='+encodeURIComponent(SO)+'&arrivalCity='+encodeURIComponent(SD)+'&rideDate='+dt.replace(/-/g,'/')+'&adult=1';
-  if(t.type==='voiture')return'https://www.blablacar.fr/search?fn='+encodeURIComponent(SO)+'&tn='+encodeURIComponent(SD)+'&db='+dt+'&seats=1';
+  if(t.type==='train')return'https://www.sncf-connect.com/app/home/search?departure='
+    +encodeURIComponent(SO)+'&arrival='+encodeURIComponent(SD)
+    +'&outwardDate='+dt+'T'+hm(t.depISO)+':00&passengers=1';
+  if(t.type==='avion')return'https://www.skyscanner.fr/transport/vols/'
+    +encodeURIComponent(SO)+'/'+encodeURIComponent(SD)+'/'
+    +dt.replace(/-/g,'')+'/?adults=1';
+  if(t.type==='bus')return'https://www.flixbus.fr/recherche?departureCity='
+    +encodeURIComponent(SO)+'&arrivalCity='+encodeURIComponent(SD)
+    +'&rideDate='+dt.replace(/-/g,'/')+'&adult=1';
+  if(t.type==='voiture')return'https://www.blablacar.fr/search?fn='
+    +encodeURIComponent(SO)+'&tn='+encodeURIComponent(SD)
+    +'&db='+dt+'&seats=1';
   return'#';
 }
 
@@ -235,7 +235,7 @@ function renderCard(t){
     +tg
     +'<div class="ts" onclick="window.tgl(this)">'
     +'<div><div class="tm">'
-    +icons.join(' ')+estTag+'</div>'
+    +icons.join(' ')+' '+estTag+'</div>'
     +'<div class="tl">'+pv.join(' · ')+'</div>'
     +'<div class="eh">▶ Détail & réservation</div>'
     +'</div><div class="tst">'
@@ -255,7 +255,6 @@ window.tgl=function(el){
   h.textContent=c.classList.contains('open')
     ?'▼ Masquer':'▶ Détail & réservation';
 };
-
 
 function mxf(f){
   if(!AT.length)return 1;
