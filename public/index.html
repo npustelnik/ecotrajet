@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EcoTrajet</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:#f0f4f8;color:#1e293b;line-height:1.6}
+header{background:linear-gradient(135deg,#065f46,#0e7490,#1e40af);color:#fff;padding:1.8rem 1rem;text-align:center}
+header h1{font-size:1.8rem;font-weight:700}
+.subtitle{opacity:.8;font-size:.85rem;margin-top:.2rem}
+main{max-width:1100px;margin:0 auto;padding:1rem}
+footer{text-align:center;padding:1.5rem;font-size:.7rem;color:#94a3b8}
+#ri{text-align:center;font-weight:600;color:#065f46;font-size:.9rem;margin-bottom:.75rem;padding:.5rem;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px}
+.autocomplete-wrap{position:relative}
+.ac-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;list-style:none;max-height:200px;overflow-y:auto;z-index:50;box-shadow:0 6px 20px rgba(0,0,0,.1)}
+.ac-list li{padding:.5rem .8rem;cursor:pointer;font-size:.85rem}
+.ac-list li:hover{background:#f0fdf4;color:#065f46}
+#sp{background:#fff;border-radius:14px;padding:1.2rem;box-shadow:0 3px 16px rgba(0,0,0,.06);margin-bottom:1rem;border:1px solid #e2e8f0}
+.fr{display:flex;gap:.65rem;align-items:end;margin-bottom:.7rem;flex-wrap:wrap}
+.fd{display:flex;flex-direction:column;flex:1;min-width:120px}
+.fd label{font-size:.7rem;font-weight:600;margin-bottom:.25rem;color:#64748b;text-transform:uppercase;letter-spacing:.3px}
+.fd input{padding:.5rem .6rem;border:1.5px solid #e2e8f0;border-radius:9px;font-size:.85rem;background:#f8fafc}
+.fd input:focus{outline:none;border-color:#0e7490;background:#fff}
+#swb{background:#f0f4f8;border:1.5px solid #e2e8f0;font-size:1.1rem;cursor:pointer;width:2.2rem;height:2.2rem;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .2s}
+#swb:hover{background:#0e7490;color:#fff;border-color:#0e7490}
+.mr{gap:.4rem!important;margin-bottom:.8rem!important}
+.mt{display:inline-flex;cursor:pointer}
+.mt input{display:none}
+.mt span{padding:.35rem .65rem;border-radius:99px;font-size:.78rem;font-weight:500;background:#f1f5f9;border:1.5px solid #e2e8f0;transition:all .2s;user-select:none}
+.mt input:checked+span{background:#065f46;color:#fff;border-color:#065f46}
+#sb{width:100%;padding:.6rem;font-size:.9rem;font-weight:600;color:#fff;background:linear-gradient(135deg,#065f46,#0e7490);border:none;border-radius:10px;cursor:pointer}
+#sb:disabled{opacity:.6;cursor:wait}
+#badges{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.6rem;margin-bottom:.75rem}
+.badge{padding:.7rem .8rem;border-radius:10px;color:#fff;font-size:.78rem;line-height:1.4}
+.badge strong{display:block;font-size:.85rem;margin-bottom:.1rem}
+.bt{background:linear-gradient(135deg,#7c3aed,#6d28d9)}
+.bg{background:linear-gradient(135deg,#059669,#047857)}
+.bp{background:linear-gradient(135deg,#ea580c,#c2410c)}
+#hg{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:1rem}
+.hc{background:#fff;border-radius:10px;padding:.45rem .55rem;box-shadow:0 1px 6px rgba(0,0,0,.04);border:1px solid #f1f5f9}
+.hc h3{font-size:.65rem;margin-bottom:.15rem;color:#64748b;text-transform:uppercase;letter-spacing:.2px;font-weight:600}
+.cw{width:100%;height:36px;position:relative}
+.cw canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+.hc input[type=range]{width:100%;margin-top:.2rem;accent-color:#0e7490}
+.sv{display:block;text-align:right;font-size:.6rem;color:#94a3b8;margin-top:.05rem}
+#results h2{font-size:1rem;margin-bottom:.7rem;font-weight:700}
+#results h2 span{font-weight:400;color:#94a3b8;font-size:.8rem}
+#rl{display:flex;flex-direction:column;gap:.55rem}
+.tc{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.05);position:relative;overflow:hidden;border:1px solid #f1f5f9;transition:all .2s}
+.tc:hover{box-shadow:0 3px 16px rgba(0,0,0,.08)}
+.tc.dim{opacity:.18;pointer-events:none}
+.tc.hl{border-left:4px solid #065f46}
+.ts{display:grid;grid-template-columns:1fr auto;gap:.4rem .8rem;padding:.85rem 1rem;cursor:pointer;transition:background .15s}
+.ts:hover{background:#f8fafb}
+.tt{position:absolute;top:.5rem;right:.7rem;font-size:.6rem;padding:2px 8px;border-radius:99px;color:#fff;font-weight:600}
+.tf{background:#7c3aed}.tg{background:#059669}.tc_{background:#ea580c}.tp{background:#0284c7}
+.tm{font-size:1rem;margin-bottom:.1rem}
+.tl{font-size:.75rem;color:#64748b}
+.tst{text-align:right;display:flex;flex-direction:column;justify-content:center;gap:.15rem;font-size:.78rem}
+.tst .pr{font-weight:700;color:#065f46;font-size:1rem}
+.tst .co{color:#059669;font-weight:500}
+.tst .du{color:#7c3aed;font-weight:500}
+.eh{font-size:.62rem;color:#cbd5e1;margin-top:.15rem}
+.ts:hover .eh{color:#94a3b8}
+.td{display:none;border-top:1px solid #f1f5f9;padding:.85rem 1rem;background:#fafbfc}
+.tc.open .td{display:block}
+.td h4{font-size:.72rem;text-transform:uppercase;letter-spacing:.3px;color:#64748b;margin-bottom:.5rem;font-weight:600}
+.dl{display:flex;align-items:flex-start;gap:.6rem;margin-bottom:.6rem;padding-bottom:.6rem;border-bottom:1px dashed #e2e8f0}
+.dl:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.li{font-size:1.3rem;min-width:1.8rem;text-align:center}
+.lf{flex:1;font-size:.78rem;line-height:1.5}
+.lf strong{color:#0f172a}
+.lf .lm{color:#94a3b8;font-size:.7rem}
+.bl{margin-top:.7rem;display:flex;gap:.4rem;flex-wrap:wrap}
+.bb{display:inline-flex;align-items:center;gap:.25rem;padding:.35rem .7rem;border-radius:7px;font-size:.72rem;font-weight:600;color:#fff;text-decoration:none;transition:all .2s;box-shadow:0 2px 5px rgba(0,0,0,.1)}
+.bb:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.15)}
+.bb.bl1{background:linear-gradient(135deg,#1d4ed8,#2563eb)}
+.bb.bl2{background:linear-gradient(135deg,#7c3aed,#8b5cf6)}
+.bb.bl3{background:linear-gradient(135deg,#059669,#10b981)}
+.bb.bl4{background:linear-gradient(135deg,#d97706,#f59e0b)}
+.bb.bl5{background:linear-gradient(135deg,#475569,#64748b)}
+.est{font-size:.6rem;color:#f59e0b;font-style:italic;margin-left:.3rem}
+.hidden{display:none}
+@media(max-width:700px){
+.fr{flex-direction:column}
+#swb{align-self:center;margin:0}
+#hg{grid-template-columns:1fr 1fr}
+.ts{grid-template-columns:1fr}
+.tst{text-align:left;flex-direction:row;gap:.6rem;flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<header><h1>🌍 EcoTrajet</h1><p class="subtitle">Comparez train · avion · bus · voiture — France</p></header>
+<main>
+<section id="sp">
+  <div class="fr">
+    <div class="fd autocomplete-wrap"><label>Départ</label><input type="text" id="ori" placeholder="Tapez une ville…" autocomplete="off"><ul id="ori-l" class="ac-list hidden"></ul></div>
+    <button id="swb">⇄</button>
+    <div class="fd autocomplete-wrap"><label>Arrivée</label><input type="text" id="dst" placeholder="Tapez une ville…" autocomplete="off"><ul id="dst-l" class="ac-list hidden"></ul></div>
+  </div>
+  <div class="fr">
+    <div class="fd"><label>📅 Date</label><input type="date" id="ddate"></div>
+    <div class="fd"><label>🕐 Départ dès</label><input type="time" id="dtim" value="06:00"></div>
+    <div class="fd"><label>🕐 Arrivée avant (opt.)</label><input type="time" id="atim" value=""></div>
+  </div>
+  <div class="fr mr">
+    <label class="mt"><input type="checkbox" class="mc" value="train" checked><span>🚆 Train</span></label>
+    <label class="mt"><input type="checkbox" class="mc" value="avion" checked><span>✈️ Avion</span></label>
+    <label class="mt"><input type="checkbox" class="mc" value="bus" checked><span>🚌 Bus</span></label>
+    <label class="mt"><input type="checkbox" class="mc" value="voiture" checked><span>🚗 Voiture</span></label>
+  </div>
+  <button id="sb">🔍 Rechercher</button>
+</section>
+<p id="ri" class="hidden"></p>
+<section id="badges" class="hidden">
+  <div class="badge bt" id="b-t"></div>
+  <div class="badge bg" id="b-g"></div>
+  <div class="badge bp" id="b-p"></div>
+</section>
+<section id="hg" class="hidden">
+  <div class="hc"><h3>H. départ</h3><div class="cw"><canvas id="hd"></canvas></div><input type="range" id="sd" min="0" max="100" value="100"><span class="sv" id="vd"></span></div>
+  <div class="hc"><h3>H. arrivée</h3><div class="cw"><canvas id="ha"></canvas></div><input type="range" id="sa" min="0" max="100" value="100"><span class="sv" id="va"></span></div>
+  <div class="hc"><h3>CO₂</h3><div class="cw"><canvas id="hc2"></canvas></div><input type="range" id="sc" min="0" max="100" value="100"><span class="sv" id="vc"></span></div>
+  <div class="hc"><h3>Prix</h3><div class="cw"><canvas id="hp"></canvas></div><input type="range" id="spr" min="0" max="100" value="100"><span class="sv" id="vp"></span></div>
+</section>
+<section id="results" class="hidden">
+  <h2>Résultats <span id="rc"></span></h2>
+  <div id="rl"></div>
+</section>
+</main>
+<footer><p>EcoTrajet — Trains SNCF réels · Vols & bus estimés</p></footer>
+<script src="app.js"></script>
+</body>
+</html>
